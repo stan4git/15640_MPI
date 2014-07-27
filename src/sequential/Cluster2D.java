@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
 
 import model.Coordinate;
@@ -94,6 +93,8 @@ public class Cluster2D {
 			System.out.println("All sample points are loaded.");
 		} catch (IOException e) {
 			throw new IOException();
+		} finally {
+			br.close();
 		}
 	}
 	

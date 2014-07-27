@@ -7,10 +7,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.PriorityQueue;
-
-import model.Coordinate;
 
 public class ClusterDNA {
 	final private int MAX_SIM = 18;
@@ -83,6 +79,8 @@ public class ClusterDNA {
 			System.out.println("All sample strands are loaded.");
 		} catch (IOException e) {
 			throw new IOException();
+		} finally {
+			br.close();
 		}
 	}
 	
