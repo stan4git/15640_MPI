@@ -24,17 +24,16 @@ public class Cluster2D {
 	
 	public static void main(String[] args) {
 		// "java cluster2D <input_file> <centriod_num>"
+		// step 1. Load arguments
 		if (args.length != 2) {
 			System.err.println("Wrong number of arguments. "
 					+ "Usage: \"java cluster2D <input_file> <centriod_num>\".");
 			System.exit(-1);
 		}
-		
 		String inputPath = null;
 		int centriodNum = 0;
 		Cluster2D cluster = null;
 		try {
-		// step 1. Load arguments
 			inputPath = args[0];
 			centriodNum = Integer.parseInt(args[1]);
 			cluster = new Cluster2D(inputPath, centriodNum);
@@ -68,7 +67,6 @@ public class Cluster2D {
 		this.inputPath = inputPath;
 		this.points = new ArrayList<Coordinate>();
 		this.centroids = new ArrayList<Coordinate>();
-//		this.prevCentroids = new ArrayList<Coordinate>();
 		this.clusters = new ArrayList<ArrayList<Coordinate>>();
 	}
 
