@@ -6,6 +6,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 import model.Coordinate;
 
@@ -50,7 +53,10 @@ public class ClusterDNA {
 		}
 
 		// step 3. Find clusters
+		cluster.findCluster();
+		
 		// step 4. Print clusters
+		cluster.printCluster();
 		
 	}
 
@@ -104,7 +110,10 @@ public class ClusterDNA {
 	
 	
 	private void findCluster() {
-		while (true) {
+		boolean converged = false;
+		while (!converged) {
+			clusters = new ArrayList<ArrayList<char[]>>();
+			
 			/* Classify all strands */
 			for (char[] strand : strands) {
 				int centroidIndex = 0;
@@ -158,14 +167,41 @@ public class ClusterDNA {
 			
 			
 			/* Find out new centroid for each cluster */
+			ArrayList<char[]> newCentroids = new ArrayList<char[]>();
 			for (int centroidIndex = 0; centroidIndex < centroidNum; centroidIndex++) {
-				char[] newCentroid = new char[DNA_LENGTH];
+				char[] centroid = new char[DNA_LENGTH];
 				for (int charIndex = 0; charIndex < DNA_LENGTH; charIndex++) {
-					
+					ArrayList<Integer> simArr = new ArrayList<Integer>();
+					char[] tagList = new char[] {'A','C','T','G'};
+					simArr.add(countA[centroidIndex][charIndex]);
+					simArr.add(countC[centroidIndex][charIndex]);
+					simArr.add(countT[centroidIndex][charIndex]);
+					simArr.add(countG[centroidIndex][charIndex]);
+					centroid[charIndex] = tagList[simArr.indexOf(Collections.max(simArr))];
 				}
+				newCentroids.add(centroid);
 			}
+			
+			
+			/* If converged, replace the old centroids */
+			if (isConverged(newCentroids)) {
+				converged = true;
+			}
+			centroids = newCentroids;
 		}
 	}
+	
+	
+	private boolean isConverged(ArrayList<char[]> newCentroids) {
+		if (newCentroids == null || newCentroids.size() != centroidNum) 
+			return false;
+		for (int centroidIndex = 0; centroidIndex < centroidNum; centroidIndex++) 
+			for (int charIndex = 0; charIndex < DNA_LENGTH; charIndex++) 
+				if (newCentroids.get(centroidIndex)[charIndex] != centroids.get(centroidIndex)[charIndex]) 
+					return false;
+		return true;
+	}
+	
 	
 	private int sim(char[] strand1, char[] strand2) {
 		int sim = 0;
@@ -175,5 +211,15 @@ public class ClusterDNA {
 		}
 		return sim;
 	}
-
+	
+	private void printCluster() {
+		for (int centroidIndex = 0; centroidIndex < centroidNum; centroidIndex++) {
+			System.out.println("Cluster " + centroidIndex + ":");
+			System.out.println("Centroid: " + centroids.get(centroidIndex).toString());
+			System.out.println("Samples: ");
+			for (char[] strand : clusters.get(centroidIndex)) {
+				System.out.println(strand.toString());
+			}
+		}
+	}
 }
