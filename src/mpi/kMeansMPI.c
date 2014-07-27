@@ -385,6 +385,7 @@ int main(int argc,char** argv){
         }
     }while (1);
     
+    /* gather all the labels of all the points on the master process */
 	int displacement = 0;
 	for(i = 0;i < processNumber;i++) {
 		handleLines[i] /= dimension;
