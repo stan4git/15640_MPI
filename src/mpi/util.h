@@ -41,9 +41,14 @@ int DNADistance(char* centroid, char* strand, int dimension);
 int tooClose(double* centroids, double* source, int num);
 
 /*
- * determin whether the source point are too similar to one of the centroids
+ * determin whether the source strand are too similar to one of the centroids
  */
 int tooSimilar(char* centroids, char* source, int dimension, int num);
+
+/*
+ * max value between two values
+ */
+int max(int num1,int num2);
 
 #endif
 
