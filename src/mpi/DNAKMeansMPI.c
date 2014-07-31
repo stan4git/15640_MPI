@@ -4,7 +4,7 @@
 #include "Util.h"
 
 /* This is the threshold to end the calculation for DNA */
-#define DNA_DIFF_THRESHOLD = 1
+#define DNA_DIFF_THRESHOLD 1
 /* This is the max difference of DNA */
 #define MAX_DIFF 2147483647
 /* This is the basic components fo the DNA sequence */
@@ -155,17 +155,13 @@ int main(int argc,char** argv){
             /* termination flag */
 			int flag = 0;
             
-            /* Example: Cluster = 2, Dimension = 4
-             * A             C              G               T
-             *  0| 4| 8|12   1 | 5| 9|13    2| 6|10|14      3| 7|11|15
-             * 16|20|24|28   17|21|25|29   18|22|26|30     19|23|27|31
-             * /
+            /* Example: Cluster = 2, Dimension = 4 */
+            /* A             C              G               T          */
+            /*  0| 4| 8|12   1 | 5| 9|13    2| 6|10|14      3| 7|11|15 */
+            /* 16|20|24|28   17|21|25|29   18|22|26|30     19|23|27|31 */
              
-             /* new four Arrays: cluster * Dimension * (A/C/G/T) */
 			int* newGeneratedContents = malloc(sizeof(int) * cluster * dimension * 4);
 			memset(newGeneratedContents, 0, sizeof(int) * cluster * dimension * 4);
-            
-			/* distributed four Arrays: cluster * Dimension * (A/C/G/T) */
 			int* distributedContents = malloc(sizeof(int) * cluster * dimension * 4);
             
 			/* the centroids for every cluster computed */
@@ -176,7 +172,7 @@ int main(int argc,char** argv){
 				int category = -1;
 				int DNAmaxDiff = MAX_DIFF;
 				for(j = 0; j < cluster;j++) {
-					int calculatedDistance = DNADistance(dnaC+j*dimension, dnaBuf+i*dimension, dimension);
+					int calculatedDistance = DNADistance(DNACentroids+j*dimension, RecvbufDNA+i*dimension, dimension);
 					if (calculatedDistance < DNAmaxDiff) {
 						DNAmaxDiff = calculatedDistance;
 						category = j;

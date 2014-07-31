@@ -4,7 +4,7 @@
 #include "Util.h"
 
 /* This is the threshold to end the calculation for 2D */
-#define TwoD_DIFF_THRESHOLD = 0.0001
+#define TwoD_DIFF_THRESHOLD 0.0001
 /* This is the max difference of 2D */
 #define MAX_DIFF 2147483647
 
