@@ -4,7 +4,7 @@
 #include "Util.h"
 
 /* This is the threshold to end the calculation for 2D */
-#define TwoD_DIFF_THRESHOLD 0.0001
+#define TwoD_DIFF_THRESHOLD 0.000000001
 /* This is the max difference of 2D */
 #define MAX_DIFF 2147483647
 
@@ -85,12 +85,13 @@ int main(int argc,char** argv){
     } else {
         handleNumbers = lineNums / numprocs * dimension;
     }
-    
+//    printf("It needs to handle : %d\n", handleNumbers);
     TwoDSource = malloc(sizeof(double) * dimension * lineNums);
     Recvbuf2D = malloc(sizeof(double) * handleNumbers);
     TwoDCentroids = malloc(sizeof(double) * cluster * dimension);
-    
-    
+//    
+//    printf("cluster : %d\n", cluster);
+//    printf("dimension : %d\n", dimension);
     
     
     /* Step 4: Read the contents, generating centroids and calculating the cursor */
@@ -108,12 +109,18 @@ int main(int argc,char** argv){
 		
 		read2DContents(fp, TwoDSource);
         generate2DCentroids(TwoDCentroids, TwoDSource, lineNums, dimension, cluster);
-        
-		fclose(fp);
+        fclose(fp);
 	}
+    
+    // int k;
+    // for(k = 0; k < sizeof(TwoDCentroids) / sizeof(TwoDCentroids[0]); k++) {
+    //     printf("%f\n", TwoDCentroids[k]);
+    // }
+    
     
     /* compute the handling lines and start index for each processes */
 	int* sendcounts = malloc(sizeof(int)*numprocs);
+    
 	int* displs = malloc(sizeof(int)*numprocs);
 	int processIndex;
     /* the previous n - 1 process must be full */
@@ -122,6 +129,9 @@ int main(int argc,char** argv){
 	}
     /* tha last process's handling lines */
 	sendcounts[numprocs - 1] = lineNums * dimension - handleNumbers * (numprocs - 1);
+    
+    
+    
     
     
     /* Compute the beginning index of line number for each process */
@@ -144,13 +154,16 @@ int main(int argc,char** argv){
     
     /* categorized all the points or DNA strands into different clusters for each processor*/
     int handleRows = sendcounts[rank] / dimension;
+//    printf("handleRows : %d\n", handleRows);
     int* categories = malloc(sizeof(int) * handleRows);
     /* all the labels of all the points on the master process */
 	int* totalCategories = malloc(sizeof(int)*lineNums);
     
     do {
+        
         /* the flag for temination of the while loop */
         int flag = 0;
+        
         /* the distributed centroids from master node */
         double* distributedCentroids = malloc(sizeof(double) * cluster * dimension);
         /* the new generated centroids */
@@ -166,20 +179,37 @@ int main(int argc,char** argv){
         for(i = 0; i < handleRows; i++) {
             int category = -1;
             double TwoDmaxDiff = MAX_DIFF;
+            
             for(j = 0; j < cluster; j++) {
+                // printf("TwoDCentroids[j*d] : %lf\n", TwoDCentroids[j * dimension]);
                 double calculatedDistance = TwoDDistance(TwoDCentroids + j * dimension, Recvbuf2D + i * dimension);
+                int k;
+                for( k = 0; k <  1; k++) {
+                    // printf("Recvbuf2D [0] :%lf\n", Recvbuf2D[k * dimension]);
+                }
                 if (calculatedDistance < TwoDmaxDiff) {
                     TwoDmaxDiff =calculatedDistance;
                     category = j;
                 }
-                categories[i] = category;
-                newGeneratedPoints[category]++;
-                /* sum each point */
-                for (j = 0; j < dimension; j++) {
-                    newGeneratedCentroids[category * dimension + j] += Recvbuf2D[i * dimension + j];
-                }
+                
             }
+            categories[i] = category;
+            newGeneratedPoints[category]++;
+            /* sum each point */
+            for (j = 0; j < dimension; j++) {
+                newGeneratedCentroids[category * dimension + j] += Recvbuf2D[i * dimension + j];
+            }
+            
+            
+            
         }
+        
+        //int k;
+        // for( k = 0; k <  2; k++) {
+        //         printf("points :%lf\n", newGeneratedPoints[k]);
+        //         printf("newGeneratedCentroids : %lf\n", newGeneratedCentroids[k]);
+        //     }
+        
         /* reduce step - new centroid sum to the master process */
         MPI_Reduce(newGeneratedCentroids, distributedCentroids, cluster * dimension, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         /* reduce step - the cluster counts to the master process */
@@ -222,7 +252,7 @@ int main(int argc,char** argv){
         
         /* broadcast the new centroids */
         MPI_Bcast (TwoDCentroids,cluster * dimension,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    }while (1);
+    } while (1);
     
     /* gather all the labels of all the points on the master process */
 	int displacement = 0;
