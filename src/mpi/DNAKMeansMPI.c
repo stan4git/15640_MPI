@@ -3,8 +3,6 @@
 #include <string.h>
 #include "Util.h"
 
-/* Master node possess the process 0 */
-#define MASTER 0
 /* This is the threshold to end the calculation for DNA */
 #define DNA_DIFF_THRESHOLD = 1
 /* This is the max difference of DNA */
@@ -52,12 +50,16 @@ int main(int argc,char** argv){
     /* Step 2: Initilize the MPI */
     
     /* Process number, Process ID */
-    int processNumber, rank;
+    int numprocs, rank;
     
     /* Initilize of MPI*/
     MPI_Init(&argc,&argv);
+    /*declare a variable to hold the time returned*/
+    double startwtime, endwtime;
+    /*get the time just before work to be timed*/
+    startwtime = MPI_Wtime();
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &processNumber);
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     
     
     
@@ -65,7 +67,7 @@ int main(int argc,char** argv){
     /* Step 3: Build the buffers */
     
     /* the total contents to be handled for DNA strands */
-    char* DNAMasterContents;
+    char* DNASource;
     
     /* the contents for each processor of DNA strands */
     char* DNAProcessContents;
@@ -81,13 +83,13 @@ int main(int argc,char** argv){
      * it need 51 lines per processor, but if it just has 500 lines,
      * it need 50 lines per processor.
      */
-    if (lineNums % processNumber > 0) {
-        handleNumbers = lineNums / processNumber * dimension + 1;
+    if (lineNums % numprocs > 0) {
+        handleNumbers = lineNums / numprocs * dimension + 1;
     } else {
-        handleNumbers = lineNums / processNumber * dimension;
+        handleNumbers = lineNums / numprocs * dimension;
     }
     
-    DNAMasterContents = malloc(sizeof(char) * dimension * lineNums);
+    DNASource = malloc(sizeof(char) * dimension * lineNums);
     DNAProcessContents = malloc(sizeof(char) * handleNumbers);
     DNACentroids = malloc(sizeof(char) * cluster * dimension);
     
@@ -100,43 +102,43 @@ int main(int argc,char** argv){
     FILE* inputFile;
     
     /* if it's master, read the data source and genterate centroids */
-	if (rank == MASTER) {
+	if (rank == 0) {
 		inputFile = fopen(filename, "r");
 		if(inputFile == NULL) {
 			printf("Cannot open file %s\n", filename);
 			exit(-1);
 		}
 		
-		readDNAContents(inputFile, DNAMasterContents, dimension);
-        generateDNACentroids(DNACentroids, DNAMasterContents, lineNums, dimension, cluster);
+		readDNAContents(inputFile, DNASource, dimension);
+        generateDNACentroids(DNACentroids, DNASource, lineNums, dimension, cluster);
         
 		fclose(inputFile);
 	}
     
     /* compute the handling lines and start index for each processes */
-	int* handleLines = malloc(sizeof(int)*processNumber);
-	int* startIndexes = malloc(sizeof(int)*processNumber);
+	int* handleLines = malloc(sizeof(int)*numprocs);
+	int* startIndexes = malloc(sizeof(int)*numprocs);
 	int processIndex;
     /* the previous n - 1 process must be full */
-	for(processIndex = 0;processIndex < processNumber - 1;processNumber++) {
+	for(processIndex = 0;processIndex < numprocs - 1;numprocs++) {
 		handleLines[processIndex] = handleNumbers;
 	}
     /* tha last process's handling lines */
-	handleLines[processNumber - 1] = lineNums * dimension - handleNumbers * (processNumber - 1);
+	handleLines[numprocs - 1] = lineNums * dimension - handleNumbers * (numprocs - 1);
     
     
     /* Compute the beginning index of line number for each process */
 	int offset = 0;
     /* the two variable are used in the loop */
     int i,j;
-	for(i = 0;i < processNumber;i++) {
+	for(i = 0;i < numprocs;i++) {
 		startIndexes[i] = offset;
 		offset += handleLines[i];
 	}
     
 	/* scatter the data and broadcast the center*/
-	MPI_Scatterv (DNAMasterContents,handleLines,startIndexes,MPI_CHAR,DNAProcessContents,handleNumbers,MPI_CHAR,MASTER,MPI_COMM_WORLD);
-    MPI_Bcast (DNACentroids,cluster * dimension,MPI_CHAR,MASTER,MPI_COMM_WORLD);
+	MPI_Scatterv (DNASource,handleLines,startIndexes,MPI_CHAR,DNAProcessContents,handleNumbers,MPI_CHAR,0,MPI_COMM_WORLD);
+    MPI_Bcast (DNACentroids,cluster * dimension,MPI_CHAR,0,MPI_COMM_WORLD);
     
     
     
@@ -206,12 +208,12 @@ int main(int argc,char** argv){
 			}
 			
 			/* reduce step - the character counts in every position of each point on the master node */
-			MPI_Reduce(newGeneratedContents, distributedContents, cluster * 4 * dimension, MPI_INT, MPI_SUM, MASTER, MPI_COMM_WORLD);
+			MPI_Reduce(newGeneratedContents, distributedContents, cluster * 4 * dimension, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
             
             
 			
 			/* on the master node, compute the new centroid for each cluster */
-			if(rank == MASTER) {
+			if(rank == 0) {
                 /* i means cluster */
 				for (i = 0; i < cluster; i++) {
 					/* j means each character of one sequence */
@@ -247,7 +249,7 @@ int main(int argc,char** argv){
 			}
             
 			/* broadcast the terminate flag */
-			MPI_Bcast (&flag,1,MPI_INT,MASTER,MPI_COMM_WORLD);
+			MPI_Bcast (&flag,1,MPI_INT,0,MPI_COMM_WORLD);
 			free(newGeneratedContents);
 			free(distributedContents);
 			if(flag) {
@@ -255,17 +257,17 @@ int main(int argc,char** argv){
             }
 			
             /* broadcast the new centroids */
-			MPI_Bcast (DNACentroids,cluster * dimension,MPI_CHAR,MASTER,MPI_COMM_WORLD);
+			MPI_Bcast (DNACentroids,cluster * dimension,MPI_CHAR,0,MPI_COMM_WORLD);
     }while (1);
     
     /* gather all the labels of all the points on the master process */
 	int displacement = 0;
-	for(i = 0;i < processNumber;i++) {
+	for(i = 0;i < numprocs;i++) {
 		handleLines[i] /= dimension;
 		startIndexes[i] = displacement;
 		displacement += handleLines[i];
 	}
-	MPI_Gatherv (categories,handleRows,MPI_INT,totalCategories,handleLines,startIndexes,MPI_INT,MASTER,MPI_COMM_WORLD);
+	MPI_Gatherv (categories,handleRows,MPI_INT,totalCategories,handleLines,startIndexes,MPI_INT,0,MPI_COMM_WORLD);
 	
 	
     
@@ -275,9 +277,12 @@ int main(int argc,char** argv){
 	free(startIndexes);
 	free(categories);
 	free(totalCategories);
-    free(DNAMasterContents);
+    free(DNASource);
     free(DNAProcessContents);
     free(DNACentroids);
     
+    /*get the time just after work is done and take the difference */
+    endwtime = MPI_Wtime();
+    printf("Timing span of this job is %lf seconds.\n",endwtime - startwtime);
 	MPI_Finalize();
 }
