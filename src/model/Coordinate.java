@@ -1,10 +1,10 @@
 package model;
 
 public class Coordinate {
-	public double x;
-	public double y;
+	public float x;
+	public float y;
 	
-	public Coordinate(double x, double y) {
+	public Coordinate(float x, float y) {
 		this.x = x;
 		this.y = y;
 	}

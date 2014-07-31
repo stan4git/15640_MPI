@@ -19,9 +19,11 @@ public class Cluster2D {
 	private ArrayList<Coordinate> points;
 	private ArrayList<Coordinate> centroids;
 	private ArrayList<ArrayList<Coordinate>> clusters;
+//	private ArrayList<Integer> assignCluster;
 	
 	
 	public static void main(String[] args) {
+		long startTime = System.currentTimeMillis();
 		// "java cluster2D <input_file> <centriod_num>"
 		// step 1. Load arguments
 		if (args.length != 2) {
@@ -58,6 +60,7 @@ public class Cluster2D {
 		
 		// step 6. Output centroids
 		cluster.printClusters();
+		System.out.println("Running time: " + ((System.currentTimeMillis() - startTime) / 1000.00) + " seconds.");
 	}
 
 	
@@ -87,8 +90,8 @@ public class Cluster2D {
 				line = line.trim();
 				if (line.length() > 1) {
 					String[] coor = line.split(",");
-					double x = Double.parseDouble(coor[0]);
-					double y = Double.parseDouble(coor[1]);
+					float x = Float.parseFloat(coor[0]);
+					float y = Float.parseFloat(coor[1]);
 					Coordinate point = new Coordinate(x, y);
 					points.add(point);
 				}
@@ -135,28 +138,31 @@ public class Cluster2D {
 		for (int i = 0; i < centroidNum; i++) {
 			clusters.add(new ArrayList<Coordinate>());
 		}
+//		assignCluster = new ArrayList<Integer>();
 	}
 	
 	private void findClusters() {
-		double fluc = Double.MAX_VALUE;
+		float fluc = Float.MAX_VALUE;
 		while (fluc > FLUC_RANGE) {
 			//generate a new cluster list
 			initCluster();
-			for (Coordinate point : points) {
+			for (int pointNum = 0; pointNum < points.size(); pointNum++) {
 //				if (centroids.contains(point))
 //					continue;
 				int clusterIndex = 0;
-				double minDist = dist(point, centroids.get(0));
+				double minDist = dist(points.get(pointNum), centroids.get(0));
 				for (int i = 1; i < centroidNum; i++) {
 					Coordinate curCentroid = centroids.get(i);
-					double curDist = dist(point, curCentroid);
+					double curDist = dist(points.get(pointNum), curCentroid);
 					if (curDist < minDist) {
 						clusterIndex = i;
 						minDist = curDist;
 					}
 				}
-				clusters.get(clusterIndex).add(point);
+				clusters.get(clusterIndex).add(points.get(pointNum));
+//				assignCluster.set(pointNum, clusterIndex);
 			}
+			
 			//calculate new centroids
 			ArrayList<Coordinate> newCentroids = new ArrayList<Coordinate>();
 			for (ArrayList<Coordinate> cluster : clusters) {
@@ -165,14 +171,15 @@ public class Cluster2D {
 			//calculate fluctuation
 			fluc = calculateFluctuation(newCentroids);
 			centroids = newCentroids;
+			System.out.println(fluc);
 		}
 	}
 	
 	
 	private Coordinate calculateMedian(ArrayList<Coordinate> cluster) {
 		int size = cluster.size();
-		double xSum = 0;
-		double ySum = 0;
+		float xSum = 0;
+		float ySum = 0;
 		for (Coordinate point : cluster) {
 			xSum += point.x;
 			ySum += point.y;
@@ -182,8 +189,8 @@ public class Cluster2D {
 	}
 	
 	
-	private double calculateFluctuation(ArrayList<Coordinate> newCentroids) {
-		double fluc = 0;
+	private float calculateFluctuation(ArrayList<Coordinate> newCentroids) {
+		float fluc = 0;
 		for (int i = 0; i < centroidNum; i++) {
 			fluc += dist(newCentroids.get(i), centroids.get(i));
 		}
@@ -195,16 +202,16 @@ public class Cluster2D {
 		for (int index = 0; index < centroidNum; index++) {
 			System.out.println("Cluster " + index + ": ");
 			System.out.println("Centroid: " + centroids.get(index).toString());
-			System.out.print("Points: ");
-			for (Coordinate point : clusters.get(index)) {
-				System.out.print(point.toString() + " ");
-			}
+//			System.out.print("Points: ");
+//			for (Coordinate point : clusters.get(index)) {
+//				System.out.print(point.toString() + " ");
+//			}
 			System.out.println();
 		}
 	}
 	
 	
-	private Double dist(Coordinate point1, Coordinate point2) {
+	private double dist(Coordinate point1, Coordinate point2) {
 		double dist = 0d;
 		dist = Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2));
 		return dist;

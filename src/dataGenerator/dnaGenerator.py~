@@ -1,0 +1,63 @@
+import sys
+import csv
+import numpy
+import getopt
+import math
+import random
+import copy
+
+
+
+
+def sim(strand1, strand2) :
+	strandLen = len(strand1)
+	sim = strandLen
+	for i in range(strand1) :
+		if strand1[i] != strand2[i] :
+			sim = sim - 1
+	return sim
+
+
+def isValid(strand, centroids, maxSim) :
+	for dna in centroids :
+		if sim(strand, dna) > maxSim :
+			return False
+	return True
+
+
+def handleArgs(args):
+	# set up return values
+	numClusters = -1
+	numPoints = -1
+	output = None
+	maxValue = 10
+
+	try:
+		optlist, args = getopt.getopt(args[1:], 'c:p:v:o:')
+	except getopt.GetoptError, err:
+		print str(err)
+		usage()
+		sys.exit(2)
+
+	for key, val in optlist:
+		# first, the required arguments
+		if   key == '-c':
+			numClusters = int(val)
+		elif key == '-p':
+			numPoints = int(val)
+		elif key == '-o':
+			output = val
+		# now, the optional argument
+		elif key == '-v':
+			maxValue = float(val)
+
+	# check required arguments were inputted  
+	if numClusters < 0 or numPoints < 0 or maxValue < 1 or \
+			output is None:
+		usage()
+		sys.exit()
+	return (numClusters, numPoints, output, \
+			maxValue)
+
+
+	
