@@ -1,4 +1,4 @@
-package model;
+package sequential;
 
 public class Coordinate {
 	public float x;

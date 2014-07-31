@@ -7,11 +7,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import model.Coordinate;
-
 public class Cluster2D {
 	final double FLUC_RANGE = 1.0e-3;
-	final double MIN_CEN_DIST = 0.5f;
+	final double MIN_CEN_DIST = 0.3;
 	
 	private int centroidNum;
 	private String inputPath;
@@ -64,6 +62,9 @@ public class Cluster2D {
 	}
 
 	
+	
+	
+	
 	public Cluster2D(String inputPath, int centroidNum) {
 		this.centroidNum = centroidNum;
 		this.inputPath = inputPath;
@@ -72,6 +73,9 @@ public class Cluster2D {
 		initCluster();
 	}
 
+	
+	
+	
 	
 	/*
 	 * This method is used to load all the sample points into
@@ -105,21 +109,28 @@ public class Cluster2D {
 	}
 	
 	
+	
+	
+	
 	/*
 	 * Used to pick out designated number of centroids.
 	 * To ensure these centroids are not too close, isTooClose will be invoked
-	 * and MIN_DIST will be used to define the minimum distance.
+	 * and MIN_CEN_DIST will be used to define the minimum distance.
 	 */
 	private void pickCentroids() throws Exception {
 		//Pick first point as centroids.
 		int cursor = 0;
-		centroids.add(points.get(cursor++));
+//		centroids.add(points.get(cursor++));
 		//Validate distances between centroids.
 		while (centroids.size() < centroidNum) {
 			if (cursor == points.size()) 
 				throw new Exception();
-			if (isValidCentroid(points.get(cursor))) 
-				centroids.add(points.get(cursor));
+			if (cursor == 0) {
+				centroids.add(points.get(getRamdonPointIndex(points.size())));
+			} else {
+				if (isValidCentroid(points.get(cursor))) 
+					centroids.add(points.get(cursor));
+			}
 			cursor++;
 		}
 	}
@@ -133,6 +144,12 @@ public class Cluster2D {
 		return true;
 	}
 
+	
+	private int getRamdonPointIndex(int max) {
+		return (int)Math.random() * max;
+	}
+	
+	
 	private void initCluster() {
 		this.clusters = new ArrayList<ArrayList<Coordinate>>();
 		for (int i = 0; i < centroidNum; i++) {
