@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import model.Coordinate;
 
 public class Cluster2D {
-	final double FLUC_RANGE = 1.0e-6;
-	final double MIN_DIST = 10.00;
+	final double FLUC_RANGE = 1.0e-3;
+	final double MIN_CEN_DIST = 0.5f;
 	
 	private int centroidNum;
 	private String inputPath;
@@ -66,7 +66,7 @@ public class Cluster2D {
 		this.inputPath = inputPath;
 		this.points = new ArrayList<Coordinate>();
 		this.centroids = new ArrayList<Coordinate>();
-		this.clusters = new ArrayList<ArrayList<Coordinate>>();
+		initCluster();
 	}
 
 	
@@ -84,11 +84,14 @@ public class Cluster2D {
 		String line;
 		try {
 			while ((line = br.readLine()) != null) {
-				String[] coor = line.split(",");
-				double x = Double.parseDouble(coor[0]);
-				double y = Double.parseDouble(coor[1]);
-				Coordinate point = new Coordinate(x, y);
-				points.add(point);
+				line = line.trim();
+				if (line.length() > 1) {
+					String[] coor = line.split(",");
+					double x = Double.parseDouble(coor[0]);
+					double y = Double.parseDouble(coor[1]);
+					Coordinate point = new Coordinate(x, y);
+					points.add(point);
+				}
 			}
 			System.out.println("All sample points are loaded.");
 		} catch (IOException e) {
@@ -121,25 +124,32 @@ public class Cluster2D {
 	
 	private boolean isValidCentroid(Coordinate currentPoint) {
 		for (Coordinate centroid : centroids) {
-			if (dist(currentPoint, centroid) < MIN_DIST)
+			if (dist(currentPoint, centroid) < MIN_CEN_DIST)
 				return false;
 		}
 		return true;
 	}
 
+	private void initCluster() {
+		this.clusters = new ArrayList<ArrayList<Coordinate>>();
+		for (int i = 0; i < centroidNum; i++) {
+			clusters.add(new ArrayList<Coordinate>());
+		}
+	}
 	
 	private void findClusters() {
 		double fluc = Double.MAX_VALUE;
 		while (fluc > FLUC_RANGE) {
 			//generate a new cluster list
-			clusters = new ArrayList<ArrayList<Coordinate>>();
+			initCluster();
 			for (Coordinate point : points) {
-				if (centroids.contains(point))
-					continue;
+//				if (centroids.contains(point))
+//					continue;
 				int clusterIndex = 0;
 				double minDist = dist(point, centroids.get(0));
 				for (int i = 1; i < centroidNum; i++) {
-					double curDist = dist(point, centroids.get(i));
+					Coordinate curCentroid = centroids.get(i);
+					double curDist = dist(point, curCentroid);
 					if (curDist < minDist) {
 						clusterIndex = i;
 						minDist = curDist;
@@ -196,7 +206,7 @@ public class Cluster2D {
 	
 	private Double dist(Coordinate point1, Coordinate point2) {
 		double dist = 0d;
-		dist = Math.sqrt(Math.pow(Math.abs(point1.x - point2.x), 2) + Math.pow(Math.abs(point1.y - point2.y), 2));
+		dist = Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2));
 		return dist;
 	}
 }
