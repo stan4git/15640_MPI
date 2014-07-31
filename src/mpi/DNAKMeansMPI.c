@@ -70,7 +70,7 @@ int main(int argc,char** argv){
     char* DNASource;
     
     /* the contents for each processor of DNA strands */
-    char* DNAProcessContents;
+    char* RecvbufDNA;
     
     /* DNA centroids */
     char* DNACentroids;
@@ -84,13 +84,13 @@ int main(int argc,char** argv){
      * it need 50 lines per processor.
      */
     if (lineNums % numprocs > 0) {
-        handleNumbers = lineNums / numprocs * dimension + 1;
+        handleNumbers = (lineNums / numprocs  + 1 ) * dimension;
     } else {
         handleNumbers = lineNums / numprocs * dimension;
     }
     
     DNASource = malloc(sizeof(char) * dimension * lineNums);
-    DNAProcessContents = malloc(sizeof(char) * handleNumbers);
+    RecvbufDNA = malloc(sizeof(char) * handleNumbers);
     DNACentroids = malloc(sizeof(char) * cluster * dimension);
     
     
@@ -99,32 +99,32 @@ int main(int argc,char** argv){
     /* Step 4: Read the contents, generating centroids and calculating the cursor */
     
     /* the file to be handled */
-    FILE* inputFile;
+    FILE* fp;
     
     /* if it's master, read the data source and genterate centroids */
 	if (rank == 0) {
-		inputFile = fopen(filename, "r");
-		if(inputFile == NULL) {
+		fp = fopen(filename, "r");
+		if(fp == NULL) {
 			printf("Cannot open file %s\n", filename);
 			exit(-1);
 		}
 		
-		readDNAContents(inputFile, DNASource, dimension);
+		readDNAContents(fp, DNASource, dimension);
         generateDNACentroids(DNACentroids, DNASource, lineNums, dimension, cluster);
         
-		fclose(inputFile);
+		fclose(fp);
 	}
     
     /* compute the handling lines and start index for each processes */
-	int* handleLines = malloc(sizeof(int)*numprocs);
-	int* startIndexes = malloc(sizeof(int)*numprocs);
+	int* sendcounts = malloc(sizeof(int)*numprocs);
+	int* displs = malloc(sizeof(int)*numprocs);
 	int processIndex;
     /* the previous n - 1 process must be full */
-	for(processIndex = 0;processIndex < numprocs - 1;numprocs++) {
-		handleLines[processIndex] = handleNumbers;
+	for(processIndex = 0;processIndex < numprocs - 1;processIndex++) {
+		sendcounts[processIndex] = handleNumbers;
 	}
     /* tha last process's handling lines */
-	handleLines[numprocs - 1] = lineNums * dimension - handleNumbers * (numprocs - 1);
+	sendcounts[numprocs - 1] = lineNums * dimension - handleNumbers * (numprocs - 1);
     
     
     /* Compute the beginning index of line number for each process */
@@ -132,12 +132,12 @@ int main(int argc,char** argv){
     /* the two variable are used in the loop */
     int i,j;
 	for(i = 0;i < numprocs;i++) {
-		startIndexes[i] = offset;
-		offset += handleLines[i];
+		displs[i] = offset;
+		offset += sendcounts[i];
 	}
     
 	/* scatter the data and broadcast the center*/
-	MPI_Scatterv (DNASource,handleLines,startIndexes,MPI_CHAR,DNAProcessContents,handleNumbers,MPI_CHAR,0,MPI_COMM_WORLD);
+	MPI_Scatterv (DNASource,sendcounts,displs,MPI_CHAR,RecvbufDNA,handleNumbers,MPI_CHAR,0,MPI_COMM_WORLD);
     MPI_Bcast (DNACentroids,cluster * dimension,MPI_CHAR,0,MPI_COMM_WORLD);
     
     
@@ -146,7 +146,7 @@ int main(int argc,char** argv){
     /* Step5: K-Means Calculating */
     
     /* categorized all the points or DNA strands into different clusters for each processor*/
-    int handleRows = handleLines[rank] / dimension;
+    int handleRows = sendcounts[rank] / dimension;
     int* categories = malloc(sizeof(int) * handleRows);
     /* all the labels of all the points on the master process */
 	int* totalCategories = malloc(sizeof(int)*lineNums);
@@ -185,7 +185,7 @@ int main(int argc,char** argv){
                 
 				/* Work for each Line's character and update the array's value */
 				for(j = 0; j < dimension; j++) {
-					switch(DNAProcessContents[i * dimension + j]) {
+					switch(RecvbufDNA[i * dimension + j]) {
 						case 'A':
 							newGeneratedContents[4 * dimension * category + 4 * j + 0]++;
 							break;
@@ -263,22 +263,22 @@ int main(int argc,char** argv){
     /* gather all the labels of all the points on the master process */
 	int displacement = 0;
 	for(i = 0;i < numprocs;i++) {
-		handleLines[i] /= dimension;
-		startIndexes[i] = displacement;
-		displacement += handleLines[i];
+		sendcounts[i] /= dimension;
+		displs[i] = displacement;
+		displacement += sendcounts[i];
 	}
-	MPI_Gatherv (categories,handleRows,MPI_INT,totalCategories,handleLines,startIndexes,MPI_INT,0,MPI_COMM_WORLD);
+	MPI_Gatherv (categories,handleRows,MPI_INT,totalCategories,sendcounts,displs,MPI_INT,0,MPI_COMM_WORLD);
 	
 	
     
     
     /* Step6: GC */
-	free(handleLines);
-	free(startIndexes);
+	free(sendcounts);
+	free(displs);
 	free(categories);
 	free(totalCategories);
     free(DNASource);
-    free(DNAProcessContents);
+    free(RecvbufDNA);
     free(DNACentroids);
     
     /*get the time just after work is done and take the difference */
