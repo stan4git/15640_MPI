@@ -169,7 +169,6 @@ public class Cluster2D {
 			//calculate fluctuation
 			fluc = calculateFluctuation(newCentroids);
 			centroids = newCentroids;
-			System.out.println(fluc);
 		}
 	}
 	
