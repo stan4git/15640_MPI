@@ -50,7 +50,7 @@ public class Cluster2D {
 		/* the first argument is path of the data file containing the 2D points */
 		String inputFile = argv[0];
 		/* the second argument is the number of the clusters */
-		int k_param = Integer.parseInt(argv[1]);
+		int cenID = Integer.parseInt(argv[1]);
 
 		/* scan input file and store the 2D points in an ArrayList */
 		ArrayList<ArrayList<Float>> points = new ArrayList<ArrayList<Float>>();
@@ -79,7 +79,7 @@ public class Cluster2D {
 		ArrayList<ArrayList<Float>> centroids = new ArrayList<ArrayList<Float>>();
 		int randInd = (int) (Math.random() * points.size());
 		centroids.add(points.get(randInd));
-		for (int i = 0; i < k_param; i++) {
+		for (int i = 0; i < cenID; i++) {
 			while (tooClose(points.get(randInd), centroids, minDist)) {
 				randInd = (int) (Math.random() * points.size());
 			}
@@ -103,9 +103,9 @@ public class Cluster2D {
 		while (incre > threshold) {
 
 			/* record sum of x & y for each cluster */
-			float[][] tagXY = new float[k_param][2];
+			float[][] tagXY = new float[cenID][2];
 			/* record size of each cluster */
-			int[] tagSize = new int[k_param];
+			int[] tagSize = new int[cenID];
 			/* record tag of each point */
 			ArrayList<Integer> tags = new ArrayList<Integer>();
 
@@ -115,7 +115,7 @@ public class Cluster2D {
 			 */
 			for (int i = 0; i < points.size(); i++) {
 				ArrayList<Float> dists = new ArrayList<Float>();
-				for (int j = 0; j < k_param; j++) {
+				for (int j = 0; j < cenID; j++) {
 					dists.add(dist(points.get(i), centroids.get(j)));
 				}
 				int tag = dists.indexOf(Collections.min(dists));
@@ -130,7 +130,7 @@ public class Cluster2D {
 			 * see if converged
 			 */
 			incre = 0.0;
-			for (int i = 0; i < k_param; i++) {
+			for (int i = 0; i < cenID; i++) {
 				tagXY[i][0] /= tagSize[i];
 				tagXY[i][1] /= tagSize[i];
 				double tempX2 = Math.pow(
@@ -146,7 +146,7 @@ public class Cluster2D {
 
 			/* if converged, print out the results */
 			if (incre <= threshold) {
-				for (int i = 0; i < k_param; i++) {
+				for (int i = 0; i < cenID; i++) {
 					System.out.println("centroid " + i + ":");
 					System.out.println(centroids.get(i));
 					System.out.println("points:");

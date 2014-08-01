@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class Cluster2D {
 	final double FLUC_RANGE = 1.0e-3;
@@ -16,8 +17,6 @@ public class Cluster2D {
 	private File inputFile;
 	private ArrayList<Coordinate> points;
 	private ArrayList<Coordinate> centroids;
-	private ArrayList<ArrayList<Coordinate>> clusters;
-//	private ArrayList<Integer> assignCluster;
 	
 	
 	public static void main(String[] args) {
@@ -70,10 +69,7 @@ public class Cluster2D {
 		this.inputPath = inputPath;
 		this.points = new ArrayList<Coordinate>();
 		this.centroids = new ArrayList<Coordinate>();
-		initCluster();
 	}
-
-	
 	
 	
 	
@@ -110,8 +106,6 @@ public class Cluster2D {
 	
 	
 	
-	
-	
 	/*
 	 * Used to pick out designated number of centroids.
 	 * To ensure these centroids are not too close, isTooClose will be invoked
@@ -121,28 +115,24 @@ public class Cluster2D {
 		//Validate distances between centroids.
 		int cursor = 0;
 		while (centroids.size() < centroidNum) {
-			if (cursor == points.size()) 
-				throw new Exception();
-			
 			do {
 				cursor = getRamdonPointIndex(points.size());
 			} while (!isValidCentroid(points.get(cursor)));
 			centroids.add(points.get(cursor));
+			cursor++;
 		}
 	}
-	
-	
 	
 	
 	
 	private boolean isValidCentroid(Coordinate currentPoint) {
-		for (Coordinate centroid : centroids) {
+		if (centroids.size() == 0) 
+			return true;
+		for (Coordinate centroid : centroids) 
 			if (dist(currentPoint, centroid) < MIN_CEN_DIST)
 				return false;
-		}
 		return true;
 	}
-
 	
 	
 	
@@ -152,68 +142,46 @@ public class Cluster2D {
 	
 	
 	
-	
-	private void initCluster() {
-		this.clusters = new ArrayList<ArrayList<Coordinate>>();
-		for (int i = 0; i < centroidNum; i++) {
-			clusters.add(new ArrayList<Coordinate>());
-		}
-//		assignCluster = new ArrayList<Integer>();
-	}
-	
 	private void findClusters() {
 		float fluc = Float.MAX_VALUE;
+		
 		while (fluc > FLUC_RANGE) {
+			float[][] clusterSum = new float[centroidNum][2];
+			int[] clusterCount = new int[centroidNum];
+			
 			//generate a new cluster list
-			initCluster();
 			for (int pointNum = 0; pointNum < points.size(); pointNum++) {
-//				if (centroids.contains(point))
-//					continue;
-				int clusterIndex = 0;
-				double minDist = dist(points.get(pointNum), centroids.get(0));
-				for (int i = 1; i < centroidNum; i++) {
-					Coordinate curCentroid = centroids.get(i);
-					double curDist = dist(points.get(pointNum), curCentroid);
-					if (curDist < minDist) {
-						clusterIndex = i;
-						minDist = curDist;
-					}
+				ArrayList<Float> cenDist = new ArrayList<Float>();
+				for (int cenIndex = 0; cenIndex < centroidNum; cenIndex++) {
+					cenDist.add(dist(points.get(pointNum), centroids.get(cenIndex)));
 				}
-				clusters.get(clusterIndex).add(points.get(pointNum));
-//				assignCluster.set(pointNum, clusterIndex);
+				int clusterIndex = cenDist.indexOf(Collections.min(cenDist));
+				clusterSum[clusterIndex][0] += points.get(pointNum).x;
+				clusterSum[clusterIndex][1] += points.get(pointNum).y;
+				clusterCount[clusterIndex]++;
 			}
 			
-			//calculate new centroids
+			
+			/* calculate new centroids */
 			ArrayList<Coordinate> newCentroids = new ArrayList<Coordinate>();
-			for (ArrayList<Coordinate> cluster : clusters) {
-				newCentroids.add(calculateMedian(cluster));
+			for (int i = 0; i < centroidNum; i++) {
+				Coordinate newCen = new Coordinate(clusterSum[i][0] / clusterCount[i],
+						clusterSum[i][1] / clusterCount[i]);
+				newCentroids.add(newCen);
 			}
+			
 			//calculate fluctuation
 			fluc = calculateFluctuation(newCentroids);
 			centroids = newCentroids;
-//			System.out.println(fluc);
+			System.out.println(fluc);
 		}
-	}
-	
-	
-	private Coordinate calculateMedian(ArrayList<Coordinate> cluster) {
-		int size = cluster.size();
-		float xSum = 0;
-		float ySum = 0;
-		for (Coordinate point : cluster) {
-			xSum += point.x;
-			ySum += point.y;
-		}
-		Coordinate newCentroid = new Coordinate(xSum / size, ySum / size);
-		return newCentroid;
 	}
 	
 	
 	private float calculateFluctuation(ArrayList<Coordinate> newCentroids) {
 		float fluc = 0;
-		for (int i = 0; i < centroidNum; i++) {
+		for (int i = 0; i < centroidNum; i++) 
 			fluc += dist(newCentroids.get(i), centroids.get(i));
-		}
 		return fluc;
 	}
 	
@@ -227,9 +195,9 @@ public class Cluster2D {
 	}
 	
 	
-	private double dist(Coordinate point1, Coordinate point2) {
-		double dist = 0d;
-		dist = Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2));
+	private Float dist(Coordinate point1, Coordinate point2) {
+		Float dist = 0f;
+		dist = (float) Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2));
 		return dist;
 	}
 }

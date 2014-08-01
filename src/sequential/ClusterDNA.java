@@ -74,9 +74,12 @@ public class ClusterDNA {
 		BufferedReader br = new BufferedReader(new FileReader(inputFile));
 		String line;
 		try {
-			while ((line = br.readLine()) != null)
-				strands.add(line.toCharArray());
-			System.out.println("All sample strands are loaded.");
+			while ((line = br.readLine()) != null) {
+				line = line.trim();
+				if (line.length() > 1) 
+					strands.add(line.toCharArray());
+			}
+			System.out.println("All sample points are loaded.");
 		} catch (IOException e) {
 			throw new IOException();
 		} finally {
