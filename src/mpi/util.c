@@ -106,7 +106,7 @@ int DNADistance(char* centroid, char* strand, int dimension) {
  * determin whether the source point are too close to one of the centroids
  */
 int tooClose(double* centroids, double* source, int num) {
-	double minDist = 0.3;
+	double minDist = 0.5;
 	int i;
 	for(i = 0;i<num;i++){
 		if(TwoDDistance(centroids+i*2, source) < minDist)
