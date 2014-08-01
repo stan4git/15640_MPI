@@ -61,9 +61,6 @@ public class Cluster2D {
 	}
 
 	
-	
-	
-	
 	public Cluster2D(String inputPath, int centroidNum) {
 		this.centroidNum = centroidNum;
 		this.inputPath = inputPath;
@@ -112,14 +109,13 @@ public class Cluster2D {
 	 * and MIN_CEN_DIST will be used to define the minimum distance.
 	 */
 	private void pickCentroids() throws Exception {
-		//Validate distances between centroids.
+		/* Validate distances between centroids. */
 		int cursor = 0;
 		while (centroids.size() < centroidNum) {
 			do {
 				cursor = getRamdonPointIndex(points.size());
 			} while (!isValidCentroid(points.get(cursor)));
 			centroids.add(points.get(cursor));
-			cursor++;
 		}
 	}
 	

@@ -17,9 +17,10 @@ public class ClusterDNA {
 	private File inputFile;
 	private ArrayList<char[]> strands;
 	private ArrayList<char[]> centroids;
-	private ArrayList<ArrayList<char[]>> clusters;
+//	private ArrayList<ArrayList<char[]>> clusters;
 
 	public static void main(String[] args) {
+		long startTime = System.currentTimeMillis();
 		/* java ClusterDNA <input> <clusterNum> */
 		// step 1. Load arguments
 		if (args.length != 2) {
@@ -54,6 +55,7 @@ public class ClusterDNA {
 		// step 4. Print clusters
 		cluster.printCluster();
 		
+		System.out.println("Running time: " + ((System.currentTimeMillis() - startTime) / 1000.00) + " seconds.");
 	}
 
 	public ClusterDNA(String inputPath, int centriodNum) {
@@ -61,7 +63,6 @@ public class ClusterDNA {
 		this.centroidNum = centriodNum;
 		this.strands = new ArrayList<char[]>();
 		this.centroids = new ArrayList<char[]>();
-		this.clusters = new ArrayList<ArrayList<char[]>>();
 	}
 	
 
@@ -75,7 +76,7 @@ public class ClusterDNA {
 		String line;
 		try {
 			while ((line = br.readLine()) != null) {
-				line = line.trim();
+				line = line.trim().replace(",", "");
 				if (line.length() > 1) 
 					strands.add(line.toCharArray());
 			}
@@ -89,14 +90,13 @@ public class ClusterDNA {
 	
 
 	private void pickCentroids() throws Exception {
+		/* Validate distances between centroids. */
 		int index = 0;
-		centroids.add(strands.get(index++));
 		while (centroids.size() < centroidNum) {
-			if (index == strands.size()) 
-				throw new Exception();
-			if (isVaildCentroid(strands.get(index))) 
-				centroids.add(strands.get(index));
-			index++;
+			do {
+				index = getRamdonPointIndex(strands.size());
+			} while (!isVaildCentroid(strands.get(index)));
+			centroids.add(strands.get(index));
 		}
 	}
 	
@@ -112,68 +112,55 @@ public class ClusterDNA {
 	
 	private void findCluster() {
 		boolean converged = false;
+		char[] tagList = new char[] {'A','C','T','G'};
+		int count = 1;
 		while (!converged) {
-			clusters = new ArrayList<ArrayList<char[]>>();
-			
-			/* Classify all strands */
-			for (char[] strand : strands) {
-				int centroidIndex = 0;
-				int maxSim = 0;
-				for (int index = 0; index < centroidNum; index++) {
-					if (centroids.get(index) == strand)
-						continue;
-					int curSim = sim(centroids.get(index), strand);
-					if (curSim > maxSim) {
-						maxSim = curSim;
-						centroidIndex = index;
-					}
-				}
-				clusters.get(centroidIndex).add(strand);
-			}
-			
-			
-			/* Calculate new centroids */
-			
 			int[][] countA = new int[centroidNum][DNA_LENGTH];
 			int[][] countC = new int[centroidNum][DNA_LENGTH];
 			int[][] countG = new int[centroidNum][DNA_LENGTH];
 			int[][] countT = new int[centroidNum][DNA_LENGTH];
 			
-			/* Calculate sim for each strands in each cluster */
-			for (int centroidIndex = 0; centroidIndex < centroidNum; centroidIndex++) {
-				char[] centroid = centroids.get(centroidIndex);
-				for (char[] strand : clusters.get(centroidIndex)) {
-					for (int charIndex = 0; charIndex < DNA_LENGTH; charIndex++) {
-						if (strand[charIndex] == centroid[charIndex]) {
-							switch (strand[charIndex]) {
-								case 'A':
-									countA[centroidIndex][charIndex]++;
-									break;
-								case 'C':
-									countC[centroidIndex][charIndex]++;
-									break;
-								case 'G':
-									countG[centroidIndex][charIndex]++;
-									break;
-								case 'T':
-									countT[centroidIndex][charIndex]++;
-									break;
-								default:
-									break;
-							}
-						}
+			/* Classify all strands */
+			for (char[] strand : strands) {
+				ArrayList<Integer> simList = new ArrayList<Integer>(centroidNum);
+				/* Calculate sim for each strands in each cluster */
+				for (int cenIndex = 0; cenIndex < centroidNum; cenIndex++) {
+					int sim = sim(centroids.get(cenIndex), strand);
+					simList.add(sim);
+				}
+				/* Find the most similar centroid */
+				int selectedCentroid = simList.indexOf(Collections.max(simList));
+				
+				/* Add apparance to record */
+				for (int charIndex = 0; charIndex < DNA_LENGTH; charIndex++) {
+					switch (strand[charIndex]) {
+					case 'A':
+						countA[selectedCentroid][charIndex]++;
+						break;
+					case 'C':
+						countC[selectedCentroid][charIndex]++;
+						break;
+					case 'G':
+						countG[selectedCentroid][charIndex]++;
+						break;
+					case 'T':
+						countT[selectedCentroid][charIndex]++;
+						break;
+					default:
+						break;
 					}
 				}
 			}
 			
 			
+			
 			/* Find out new centroid for each cluster */
 			ArrayList<char[]> newCentroids = new ArrayList<char[]>();
+			
 			for (int centroidIndex = 0; centroidIndex < centroidNum; centroidIndex++) {
 				char[] centroid = new char[DNA_LENGTH];
 				for (int charIndex = 0; charIndex < DNA_LENGTH; charIndex++) {
 					ArrayList<Integer> simArr = new ArrayList<Integer>();
-					char[] tagList = new char[] {'A','C','T','G'};
 					simArr.add(countA[centroidIndex][charIndex]);
 					simArr.add(countC[centroidIndex][charIndex]);
 					simArr.add(countT[centroidIndex][charIndex]);
@@ -187,6 +174,8 @@ public class ClusterDNA {
 			/* If converged, replace the old centroids */
 			if (isConverged(newCentroids)) {
 				converged = true;
+			} else {
+				System.out.println(count++);
 			}
 			centroids = newCentroids;
 		}
@@ -203,6 +192,10 @@ public class ClusterDNA {
 		return true;
 	}
 	
+	private int getRamdonPointIndex(int max) {
+		return (int)(Math.random() * max);
+	}
+	
 	
 	private int sim(char[] strand1, char[] strand2) {
 		int sim = 0;
@@ -216,11 +209,8 @@ public class ClusterDNA {
 	private void printCluster() {
 		for (int centroidIndex = 0; centroidIndex < centroidNum; centroidIndex++) {
 			System.out.println("Cluster " + centroidIndex + ":");
-			System.out.println("Centroid: " + centroids.get(centroidIndex).toString());
-			System.out.println("Samples: ");
-			for (char[] strand : clusters.get(centroidIndex)) {
-				System.out.println(strand.toString());
-			}
+			String str = new String(centroids.get(centroidIndex));
+			System.out.println("Centroid: " + str);
 		}
 	}
 }
