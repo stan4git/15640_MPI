@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public class Cluster2D {
 	final double FLUC_RANGE = 1.0e-3;
-	final double MIN_CEN_DIST = 0.3;
+	final double MIN_CEN_DIST = 0.5;
 	
 	private int centroidNum;
 	private String inputPath;
@@ -118,22 +118,21 @@ public class Cluster2D {
 	 * and MIN_CEN_DIST will be used to define the minimum distance.
 	 */
 	private void pickCentroids() throws Exception {
-		//Pick first point as centroids.
-		int cursor = 0;
-//		centroids.add(points.get(cursor++));
 		//Validate distances between centroids.
+		int cursor = 0;
 		while (centroids.size() < centroidNum) {
 			if (cursor == points.size()) 
 				throw new Exception();
-			if (cursor == 0) {
-				centroids.add(points.get(getRamdonPointIndex(points.size())));
-			} else {
-				if (isValidCentroid(points.get(cursor))) 
-					centroids.add(points.get(cursor));
-			}
-			cursor++;
+			
+			do {
+				cursor = getRamdonPointIndex(points.size());
+			} while (!isValidCentroid(points.get(cursor)));
+			centroids.add(points.get(cursor));
 		}
 	}
+	
+	
+	
 	
 	
 	private boolean isValidCentroid(Coordinate currentPoint) {
@@ -145,9 +144,13 @@ public class Cluster2D {
 	}
 
 	
+	
+	
 	private int getRamdonPointIndex(int max) {
-		return (int)Math.random() * max;
+		return (int)(Math.random() * max);
 	}
+	
+	
 	
 	
 	private void initCluster() {
@@ -188,7 +191,7 @@ public class Cluster2D {
 			//calculate fluctuation
 			fluc = calculateFluctuation(newCentroids);
 			centroids = newCentroids;
-			System.out.println(fluc);
+//			System.out.println(fluc);
 		}
 	}
 	
@@ -219,10 +222,6 @@ public class Cluster2D {
 		for (int index = 0; index < centroidNum; index++) {
 			System.out.println("Cluster " + index + ": ");
 			System.out.println("Centroid: " + centroids.get(index).toString());
-//			System.out.print("Points: ");
-//			for (Coordinate point : clusters.get(index)) {
-//				System.out.print(point.toString() + " ");
-//			}
 			System.out.println();
 		}
 	}
